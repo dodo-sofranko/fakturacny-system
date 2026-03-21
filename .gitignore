@@ -1,0 +1,22 @@
+# Závislosti
+/vendor/
+/node_modules/
+
+# Konfigurácia (obsahuje heslá a tajné kľúče)
+/.env
+
+# Buildnuté assets (generované z src/css/app.css)
+/public/css/app.css
+
+# Storage
+/storage/*
+!/storage/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace
