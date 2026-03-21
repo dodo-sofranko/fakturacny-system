@@ -18,7 +18,7 @@ $action = $isEdit ? "/odberatelia/{$odberatel['id']}/update" : '/odberatelia/sto
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Ulica</label>
                 <input type="text" name="ulica" value="<?= e($odberatel['ulica'] ?? '') ?>"
@@ -31,7 +31,7 @@ $action = $isEdit ? "/odberatelia/{$odberatel['id']}/update" : '/odberatelia/sto
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">PSČ</label>
                 <input type="text" name="psc" value="<?= e($odberatel['psc'] ?? '') ?>"
@@ -44,7 +44,7 @@ $action = $isEdit ? "/odberatelia/{$odberatel['id']}/update" : '/odberatelia/sto
             </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">IČO</label>
                 <input type="text" name="ico" value="<?= e($odberatel['ico'] ?? '') ?>"
@@ -62,7 +62,7 @@ $action = $isEdit ? "/odberatelia/{$odberatel['id']}/update" : '/odberatelia/sto
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input type="email" name="email" value="<?= e($odberatel['email'] ?? '') ?>"

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= e($pageTitle ?? APP_NAME) ?></title>
-    <link rel="stylesheet" href="/public/css/app.css">
+    <link rel="stylesheet" href="/public/css/app.css?v=<?= filemtime(__DIR__ . '/../public/css/app.css') ?>">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
@@ -22,7 +22,7 @@
     </div>
 </nav>
 
-<main class="max-w-6xl mx-auto px-4 py-6">
+<main class="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
     <?php $flash = flash(); if ($flash): ?>
         <div class="<?= $flash['type'] === 'success' ? 'flash-success' : 'flash-error' ?>" x-data x-init="setTimeout(() => $el.remove(), 4000)">
             <?= e($flash['msg']) ?>

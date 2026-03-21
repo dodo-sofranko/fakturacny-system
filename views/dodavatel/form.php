@@ -10,7 +10,7 @@
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Ulica</label>
                 <input type="text" name="ulica" value="<?= e($dodavatel['ulica'] ?? '') ?>"
@@ -23,7 +23,7 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">PSČ</label>
                 <input type="text" name="psc" value="<?= e($dodavatel['psc'] ?? '') ?>"
@@ -41,7 +41,7 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">IČ DPH</label>
                 <input type="text" name="ic_dph" value="<?= e($dodavatel['ic_dph'] ?? '') ?>"
@@ -64,7 +64,7 @@
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">SWIFT / BIC</label>
                 <input type="text" name="swift" value="<?= e($dodavatel['swift'] ?? '') ?>"
@@ -77,7 +77,7 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input type="email" name="email" value="<?= e($dodavatel['email'] ?? '') ?>"

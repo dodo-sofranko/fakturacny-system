@@ -34,7 +34,9 @@
             <?= e($rok) ?>
             <span class="text-sm font-normal text-gray-400">(<?= count($faktury) ?> faktúr)</span>
         </h2>
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+
+        <!-- Desktop tabuľka -->
+        <div class="hidden sm:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <table class="w-full text-sm">
                 <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
@@ -72,24 +74,20 @@
                         </td>
                         <td class="px-4 py-3 text-right whitespace-nowrap">
                             <a href="/faktury/<?= $f['id'] ?>/pdf?v=<?= strtotime($f['pdf_generated_at'] ?? '') ?>" target="_blank"
-                                class="inline-flex align-middle" style="color:#f87171"
-                                onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#f87171'" title="Otvoriť PDF">
+                                class="inline-flex text-red-400 hover:text-red-600 align-middle" title="Otvoriť PDF">
                                 <span class="material-icons" style="font-size:20px">picture_as_pdf</span>
                             </a>
                             <a href="/faktury/<?= $f['id'] ?>/copy"
-                                class="inline-flex align-middle ml-1" style="color:#22c55e"
-                                onmouseover="this.style.color='#15803d'" onmouseout="this.style.color='#22c55e'" title="Kopírovať faktúru">
+                                class="inline-flex text-green-500 hover:text-green-700 align-middle ml-1" title="Kopírovať faktúru">
                                 <span class="material-icons" style="font-size:20px">content_copy</span>
                             </a>
                             <a href="/faktury/<?= $f['id'] ?>/edit"
-                                class="inline-flex align-middle ml-1" style="color:#3b82f6"
-                                onmouseover="this.style.color='#1d4ed8'" onmouseout="this.style.color='#3b82f6'" title="Upraviť">
+                                class="inline-flex text-blue-500 hover:text-blue-700 align-middle ml-1" title="Upraviť">
                                 <span class="material-icons" style="font-size:20px">edit</span>
                             </a>
                             <form method="POST" action="/faktury/<?= $f['id'] ?>/delete" class="inline"
                                 onsubmit="return confirm('Naozaj vymazať faktúru <?= e($f['cislo_faktury']) ?>?')">
-                                <button type="submit" class="inline-flex align-middle ml-1 cursor-pointer" style="color:#f87171"
-                                    onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#f87171'" title="Vymazať">
+                                <button type="submit" class="inline-flex text-red-400 hover:text-red-600 align-middle ml-1 cursor-pointer" title="Vymazať">
                                     <span class="material-icons" style="font-size:20px">delete</span>
                                 </button>
                             </form>
@@ -108,6 +106,61 @@
                 </tfoot>
             </table>
         </div>
+
+        <!-- Mobile karty -->
+        <div class="sm:hidden space-y-2">
+            <?php foreach ($faktury as $f): ?>
+            <?php
+                $dnes = new DateTime();
+                $splatnost = new DateTime($f['datum_splatnosti']);
+                $expired = $splatnost < $dnes;
+            ?>
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                <div class="flex items-start justify-between mb-2">
+                    <div>
+                        <a href="/faktury/<?= $f['id'] ?>/pdf?v=<?= strtotime($f['pdf_generated_at'] ?? '') ?>" target="_blank"
+                            class="font-mono font-semibold text-blue-600 text-base">
+                            <?= e($f['cislo_faktury']) ?>
+                        </a>
+                        <div class="text-gray-700 text-sm mt-0.5"><?= e($f['odberatel_nazov']) ?></div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-gray-900"><?= formatMoney((float)$f['celkova_suma']) ?> EUR</div>
+                        <div class="text-xs <?= $expired ? 'text-red-600 font-medium' : 'text-gray-400' ?> mt-0.5">
+                            do <?= date('d.m.Y', strtotime($f['datum_splatnosti'])) ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                    <div class="text-xs text-gray-400"><?= date('d.m.Y', strtotime($f['datum_vystavenia'])) ?></div>
+                    <div class="flex items-center gap-3">
+                        <a href="/faktury/<?= $f['id'] ?>/pdf?v=<?= strtotime($f['pdf_generated_at'] ?? '') ?>" target="_blank"
+                            style="color:#f87171" title="PDF">
+                            <span class="material-icons" style="font-size:22px">picture_as_pdf</span>
+                        </a>
+                        <a href="/faktury/<?= $f['id'] ?>/copy"
+                            style="color:#22c55e" title="Kopírovať">
+                            <span class="material-icons" style="font-size:22px">content_copy</span>
+                        </a>
+                        <a href="/faktury/<?= $f['id'] ?>/edit"
+                            style="color:#3b82f6" title="Upraviť">
+                            <span class="material-icons" style="font-size:22px">edit</span>
+                        </a>
+                        <form method="POST" action="/faktury/<?= $f['id'] ?>/delete" class="inline"
+                            onsubmit="return confirm('Naozaj vymazať faktúru <?= e($f['cislo_faktury']) ?>?')">
+                            <button type="submit" style="color:#f87171" title="Vymazať">
+                                <span class="material-icons" style="font-size:22px">delete</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+            <div class="text-right text-sm font-semibold text-gray-600 px-1 pt-1">
+                Spolu: <?= formatMoney(array_sum(array_column($faktury, 'celkova_suma'))) ?> EUR
+            </div>
+        </div>
+
     </div>
     <?php endforeach; ?>
 <?php endif; ?>

@@ -33,10 +33,10 @@ if (empty($polozky)) $polozkyJson = '[]';
     class="space-y-6">
 
     <!-- Hlavičkový riadok -->
-    <div class="grid grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
 
         <!-- Dodávateľ info -->
-        <div class="col-span-1 bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
             <h2 class="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">Dodávateľ</h2>
             <div class="text-sm text-gray-600 space-y-0.5">
                 <div class="font-semibold text-gray-900"><?= e($dodavatel['nazov'] ?? '') ?></div>
@@ -50,7 +50,7 @@ if (empty($polozky)) $polozkyJson = '[]';
         </div>
 
         <!-- Odberateľ select -->
-        <div class="col-span-1 bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
             <h2 class="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">Odberateľ *</h2>
             <select name="odberatel_id" required
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -66,7 +66,7 @@ if (empty($polozky)) $polozkyJson = '[]';
         </div>
 
         <!-- Číslo faktúry + dátumy -->
-        <div class="col-span-1 bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
             <h2 class="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">Doklad</h2>
             <div class="space-y-3">
                 <div>
@@ -113,7 +113,8 @@ if (empty($polozky)) $polozkyJson = '[]';
             </button>
         </div>
 
-        <table class="w-full text-sm">
+        <!-- Desktop tabuľka -->
+        <table class="hidden sm:table w-full text-sm">
             <thead class="bg-gray-50">
                 <tr>
                     <th class="text-left px-4 py-2 font-medium text-gray-600 w-8">#</th>
@@ -139,7 +140,6 @@ if (empty($polozky)) $polozkyJson = '[]';
                                 placeholder="Názov položky..."
                                 class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 autocomplete="off">
-                            <!-- Autocomplete dropdown -->
                             <ul x-show="item.suggestions && item.suggestions.length > 0"
                                 class="absolute z-10 top-full left-4 right-4 bg-white border border-gray-200 rounded-lg shadow-lg mt-0.5 max-h-48 overflow-y-auto">
                                 <template x-for="(s, si) in item.suggestions" :key="si">
@@ -158,7 +158,6 @@ if (empty($polozky)) $polozkyJson = '[]';
                                 @input="calcItem(index)"
                                 @focus="$event.target.select()"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                style="-moz-appearance:textfield"
                                 onwheel="this.blur()">
                         </td>
                         <td class="px-4 py-2">
@@ -175,7 +174,6 @@ if (empty($polozky)) $polozkyJson = '[]';
                                 @input="calcItem(index)"
                                 @focus="$event.target.select()"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                style="-moz-appearance:textfield"
                                 onwheel="this.blur()">
                         </td>
                         <td class="px-4 py-2 text-right font-semibold text-gray-800"
@@ -196,6 +194,76 @@ if (empty($polozky)) $polozkyJson = '[]';
                 </tr>
             </tfoot>
         </table>
+
+        <!-- Mobile položky -->
+        <div class="sm:hidden divide-y divide-gray-100">
+            <template x-for="(item, index) in items" :key="index">
+                <div class="p-4 space-y-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-400 w-5" x-text="index + 1 + '.'"></span>
+                        <div class="relative flex-1">
+                            <input type="text"
+                                :name="'polozka_nazov[' + index + ']'"
+                                x-model="item.nazov"
+                                @input.debounce.300ms="fetchSuggestions(index, $event.target.value)"
+                                @keydown.escape="closeSuggestions(index)"
+                                @blur.debounce.200ms="closeSuggestions(index)"
+                                placeholder="Názov položky..."
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                autocomplete="off">
+                            <ul x-show="item.suggestions && item.suggestions.length > 0"
+                                class="absolute z-10 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-0.5 max-h-48 overflow-y-auto">
+                                <template x-for="(s, si) in item.suggestions" :key="si">
+                                    <li @mousedown.prevent="pickSuggestion(index, s)"
+                                        class="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm flex justify-between">
+                                        <span x-text="s.nazov"></span>
+                                        <span class="text-gray-400 text-xs" x-text="s.posledna_cena ? s.posledna_cena + ' EUR' : ''"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                        <button type="button" @click="removeItem(index)"
+                            class="text-gray-300 hover:text-red-500 text-2xl leading-none shrink-0">×</button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 pl-7">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Množstvo</label>
+                            <input type="number" step="0.001" min="0"
+                                :name="'polozka_mnozstvo[' + index + ']'"
+                                x-model="item.mnozstvo"
+                                @input="calcItem(index)"
+                                @focus="$event.target.select()"
+                                class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onwheel="this.blur()">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Jednotka</label>
+                            <input type="text"
+                                :name="'polozka_jednotka[' + index + ']'"
+                                x-model="item.jednotka"
+                                placeholder="ks"
+                                class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Jedn. cena</label>
+                            <input type="number" step="0.01" min="0"
+                                :name="'polozka_jcena[' + index + ']'"
+                                x-model="item.jcena"
+                                @input="calcItem(index)"
+                                @focus="$event.target.select()"
+                                class="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onwheel="this.blur()">
+                        </div>
+                    </div>
+                    <div class="pl-7 text-right text-sm font-semibold text-gray-800"
+                        x-text="formatNum(item.spolu) + ' EUR'"></div>
+                </div>
+            </template>
+            <div class="px-4 py-3 bg-gray-50 flex justify-between items-center">
+                <span class="font-semibold text-gray-700">Celková suma:</span>
+                <span class="font-bold text-xl text-gray-900" x-text="formatNum(total) + ' EUR'"></span>
+            </div>
+        </div>
 
         <div class="px-5 py-3 border-t border-gray-100">
             <button type="button" @click="addItem()"
