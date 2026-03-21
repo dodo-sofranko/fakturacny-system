@@ -16,13 +16,15 @@ class PayBySquare
         string $currency = 'EUR',
         string $variabilnySymbol = '',
         string $dueDate = '',
-        string $note = ''
+        string $cisloFaktury = '',
+        string $recipient = ''
     ): string {
         // Zostavíme payload podľa PAY by Square spec
         // \t je oddeľovač polí, \n je oddeľovač záznamov
         $invoiceId = '';
         $constantSymbol = '';
         $specificSymbol = '';
+        $recipientAscii = self::removeDiacritics($recipient);
 
         // Formát dátumu YYYYMMDD
         $dueDateFormatted = '';
@@ -43,7 +45,7 @@ class PayBySquare
             $constantSymbol,        // ConstantSymbol
             $specificSymbol,        // SpecificSymbol
             '',                     // OriginatorRefInfo
-            $note,                  // PaymentNote
+            $cisloFaktury,          // PaymentNote (číslo faktúry)
             '1',                    // BankAccountsCount
             $iban,                  // IBAN
             '',                     // BIC (prázdne = bank si doplní)
@@ -53,7 +55,7 @@ class PayBySquare
         $compressed = self::lzmaCompress($payload);
         if ($compressed === null) {
             // Fallback: jednoduchý IBAN QR bez kompresie (nie PAY by Square)
-            return "BCD\n001\n1\nSCT\n\n{$note}\n{$iban}\nEUR{$amount}\n\n{$variabilnySymbol}\n{$note}";
+            return "BCD\n001\n1\nSCT\n\n{$recipientAscii}\n{$iban}\nEUR{$amount}\n\n{$variabilnySymbol}\n{$cisloFaktury}";
         }
 
         // Kontrolný CRC8
@@ -61,6 +63,15 @@ class PayBySquare
         $withCrc = chr($crc) . $compressed;
 
         return self::base32hex($withCrc);
+    }
+
+    private static function removeDiacritics(string $s): string
+    {
+        $from = ['á','ä','č','ď','é','í','ľ','ĺ','ň','ó','ô','ŕ','š','ť','ú','ý','ž',
+                 'Á','Ä','Č','Ď','É','Í','Ľ','Ĺ','Ň','Ó','Ô','Ŕ','Š','Ť','Ú','Ý','Ž'];
+        $to   = ['a','a','c','d','e','i','l','l','n','o','o','r','s','t','u','y','z',
+                 'A','A','C','D','E','I','L','L','N','O','O','R','S','T','U','Y','Z'];
+        return str_replace($from, $to, $s);
     }
 
     private static function lzmaCompress(string $data): ?string

@@ -36,6 +36,7 @@ class PdfGenerator
             (float)$faktura['celkova_suma'],
             $faktura['variabilny_symbol'] ?? $faktura['cislo_faktury'],
             $faktura['datum_splatnosti'],
+            $faktura['cislo_faktury'],
             $dodavatel['nazov'] ?? ''
         );
 
@@ -65,22 +66,11 @@ class PdfGenerator
         return $output;
     }
 
-    private static function removeDiacritics(string $s): string
+    private static function generateQrCode(string $iban, float $amount, string $vs, string $dueDate, string $cisloFaktury = '', string $recipient = ''): string
     {
-        $from = ['á','ä','č','ď','é','í','ľ','ĺ','ň','ó','ô','ŕ','š','ť','ú','ý','ž',
-                 'Á','Ä','Č','Ď','É','Í','Ľ','Ĺ','Ň','Ó','Ô','Ŕ','Š','Ť','Ú','Ý','Ž'];
-        $to   = ['a','a','c','d','e','i','l','l','n','o','o','r','s','t','u','y','z',
-                 'A','A','C','D','E','I','L','L','N','O','O','R','S','T','U','Y','Z'];
-        return str_replace($from, $to, $s);
-    }
-
-    private static function generateQrCode(string $iban, float $amount, string $vs, string $dueDate, string $recipient = ''): string
-    {
-        $recipientAscii = self::removeDiacritics($recipient);
-
         // PAY by Square QR
         try {
-            $qrString = PayBySquare::generate($iban, $amount, 'EUR', $vs, $dueDate, $recipientAscii);
+            $qrString = PayBySquare::generate($iban, $amount, 'EUR', $vs, $dueDate, $cisloFaktury, $recipient);
             if (!$qrString) throw new \Exception('empty');
 
             $qrCode = new QrCode(
@@ -98,7 +88,7 @@ class PdfGenerator
         } catch (\Exception $e) {
             // Fallback: EPC QR (SEPA credit transfer)
             try {
-                $fallback = "BCD\n002\n1\nSCT\n\n{$recipientAscii}\n{$iban}\nEUR" . number_format($amount, 2, '.', '') . "\n\n{$vs}\n";
+                $fallback = "BCD\n002\n1\nSCT\n\n\n{$iban}\nEUR" . number_format($amount, 2, '.', '') . "\n\n{$vs}\n{$cisloFaktury}";
                 $qrCode = new QrCode(
                     data: $fallback,
                     encoding: new Encoding('UTF-8'),
