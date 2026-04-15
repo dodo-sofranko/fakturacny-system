@@ -2,14 +2,10 @@
 
 /**
  * PAY by Square QR kód generátor (Slovak banking standard)
- * Generuje string pre QR kód podľa PAY by Square štandardu.
+ * Formát podľa oficiálnej PAY by Square špecifikácie SBA.
  */
 class PayBySquare
 {
-    /**
-     * Vygeneruje PAY by Square string pre QR kód.
-     * Formát: https://www.sbaonline.sk/projekt/pay-by-square/
-     */
     public static function generate(
         string $iban,
         float  $amount,
@@ -19,50 +15,77 @@ class PayBySquare
         string $cisloFaktury = '',
         string $recipient = ''
     ): string {
-        // Zostavíme payload podľa PAY by Square spec
-        // \t je oddeľovač polí, \n je oddeľovač záznamov
-        $invoiceId = '';
-        $constantSymbol = '';
-        $specificSymbol = '';
-        $recipientAscii = self::removeDiacritics($recipient);
+        // IBAN bez medzier
+        $iban = str_replace(' ', '', $iban);
+
+        // Ak variabilný symbol nie je zadaný, použijeme číslo faktúry (len číslice)
+        if (empty($variabilnySymbol) && $cisloFaktury) {
+            $variabilnySymbol = preg_replace('/\D/', '', $cisloFaktury);
+        }
 
         // Formát dátumu YYYYMMDD
-        $dueDateFormatted = '';
-        if ($dueDate) {
-            $dueDateFormatted = date('Ymd', strtotime($dueDate));
-        }
+        $dueDateFormatted = $dueDate ? date('Ymd', strtotime($dueDate)) : '';
 
-        // PAY by Square payload (tab-separated)
-        // Verzia, platba, suma, mena, dátum, typ platby, VS, SS, KS, referencia platby, IBAN, BIC, správa
+        $message = $cisloFaktury ? 'Úhrada faktúry: ' . $cisloFaktury : '';
+        $recipientAscii = self::removeDiacritics($recipient);
+
+        // PAY by Square payload — správne poradie polí podľa SBA špecifikácie
         $payload = implode("\t", [
-            '0000000001',           // InvoiceID (prázdne = generuje sa)
-            '1',                    // IsRegularPayment
-            number_format($amount, 2, '.', ''),
-            $currency,
-            $dueDateFormatted,
-            '0',                    // PaymentType: 0 = Platba
-            $variabilnySymbol,      // VariableSymbol
-            $constantSymbol,        // ConstantSymbol
-            $specificSymbol,        // SpecificSymbol
-            '',                     // OriginatorRefInfo
-            $cisloFaktury,          // PaymentNote (číslo faktúry)
-            '1',                    // BankAccountsCount
-            $iban,                  // IBAN
-            '',                     // BIC (prázdne = bank si doplní)
+            '',                                          // InvoiceID (prázdne)
+            '1',                                         // PaymentsCount
+            '1',                                         // IsRegularPayment
+            number_format($amount, 2, '.', ''),          // Amount
+            $currency,                                   // Currency
+            $dueDateFormatted,                           // DueDate
+            $variabilnySymbol,                           // VariableSymbol
+            '',                                          // ConstantSymbol
+            '',                                          // SpecificSymbol
+            '',                                          // OriginatorRefInfo
+            $message,                                    // PaymentNote
+            '1',                                         // BankAccountsCount
+            $iban,                                       // IBAN
+            '',                                          // BIC
+            '0',                                         // StandingOrderExt
+            '0',                                         // DirectDebitExt
+            $recipientAscii,                             // BeneficiaryName (field 16)
         ]);
 
-        // Komprimujeme pomocou xz (LZMA) — PAY by Square vyžaduje LZMA2
-        $compressed = self::lzmaCompress($payload);
+        // CRC32b — reverzovaný (little-endian)
+        $withCrc = strrev(hash('crc32b', $payload, true)) . $payload;
+
+        // LZMA1 kompresia
+        $compressed = self::lzmaCompress($withCrc);
         if ($compressed === null) {
-            // Fallback: jednoduchý IBAN QR bez kompresie (nie PAY by Square)
-            return "BCD\n001\n1\nSCT\n\n{$recipientAscii}\n{$iban}\nEUR{$amount}\n\n{$variabilnySymbol}\n{$cisloFaktury}";
+            // Fallback: EPC/SEPA QR
+            $recipientAscii = self::removeDiacritics($recipient);
+            return "BCD\n001\n1\nSCT\n\n{$recipientAscii}\n{$iban}\nEUR{$amount}\n\n{$variabilnySymbol}\n{$message}";
         }
 
-        // Kontrolný CRC8
-        $crc = self::crc8($payload);
-        $withCrc = chr($crc) . $compressed;
+        // Header: 2 bajty verzia (0x00 0x00) + 2 bajty dĺžka pôvodného payloadu (little-endian)
+        $header = "\x00\x00" . pack('v', strlen($withCrc));
+        $binary = bin2hex($header . $compressed);
 
-        return self::base32hex($withCrc);
+        // Konverzia hex → binárne bity
+        $bits = '';
+        for ($i = 0; $i < strlen($binary); $i++) {
+            $bits .= str_pad(base_convert($binary[$i], 16, 2), 4, '0', STR_PAD_LEFT);
+        }
+
+        // Pad na násobok 5
+        $rest = strlen($bits) % 5;
+        if ($rest !== 0) {
+            $bits .= str_repeat('0', 5 - $rest);
+        }
+
+        // Base32 kódovanie (PAY by Square abeceda)
+        $alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUV';
+        $result = '';
+        $groups = strlen($bits) / 5;
+        for ($i = 0; $i < $groups; $i++) {
+            $result .= $alphabet[bindec(substr($bits, $i * 5, 5))];
+        }
+
+        return $result;
     }
 
     private static function removeDiacritics(string $s): string
@@ -76,63 +99,27 @@ class PayBySquare
 
     private static function lzmaCompress(string $data): ?string
     {
-        // Pokúsime sa použiť xz binary
+        $xzPaths = ['/opt/homebrew/bin/xz', '/usr/bin/xz', '/usr/local/bin/xz'];
+        $xzBin = null;
+        foreach ($xzPaths as $path) {
+            if (file_exists($path)) {
+                $xzBin = $path;
+                break;
+            }
+        }
+        if (!$xzBin) return null;
+
         $tmpIn = tempnam(sys_get_temp_dir(), 'pbsq_');
-        $tmpOut = $tmpIn . '.xz';
         file_put_contents($tmpIn, $data);
 
         $cmd = sprintf(
-            'xz --format=raw --lzma2=lc=3,lp=0,pb=2,dict=4096 --stdout %s 2>/dev/null',
+            '%s --format=raw --lzma1=lc=3,lp=0,pb=2,dict=128KiB --stdout %s 2>/dev/null',
+            escapeshellarg($xzBin),
             escapeshellarg($tmpIn)
         );
         $compressed = shell_exec($cmd);
         unlink($tmpIn);
-        if (file_exists($tmpOut)) unlink($tmpOut);
 
-        return $compressed ?: null;
-    }
-
-    private static function crc8(string $data): int
-    {
-        $crc = 0;
-        for ($i = 0; $i < strlen($data); $i++) {
-            $crc ^= ord($data[$i]);
-            for ($j = 0; $j < 8; $j++) {
-                if ($crc & 0x80) {
-                    $crc = (($crc << 1) ^ 0x07) & 0xFF;
-                } else {
-                    $crc = ($crc << 1) & 0xFF;
-                }
-            }
-        }
-        return $crc;
-    }
-
-    private static function base32hex(string $data): string
-    {
-        $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-        $result = '';
-        $buffer = 0;
-        $bits = 0;
-
-        for ($i = 0; $i < strlen($data); $i++) {
-            $buffer = ($buffer << 8) | ord($data[$i]);
-            $bits += 8;
-            while ($bits >= 5) {
-                $bits -= 5;
-                $result .= $alphabet[($buffer >> $bits) & 0x1F];
-            }
-        }
-
-        if ($bits > 0) {
-            $result .= $alphabet[($buffer << (5 - $bits)) & 0x1F];
-        }
-
-        // Padding
-        while (strlen($result) % 8 !== 0) {
-            $result .= '=';
-        }
-
-        return $result;
+        return ($compressed !== null && $compressed !== '') ? $compressed : null;
     }
 }

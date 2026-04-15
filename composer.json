@@ -4,7 +4,8 @@
         "mpdf/mpdf": "^8.2",
         "endroid/qr-code": "^6.0",
         "tecnickcom/tcpdf": "^6.7",
-        "dompdf/dompdf": "^3.1"
+        "dompdf/dompdf": "^3.1",
+        "matok/pay-by-square-svk": "^1.0"
     },
     "autoload": {
         "psr-4": {
