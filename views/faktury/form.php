@@ -107,10 +107,18 @@ if (empty($polozky)) $polozkyJson = '[]';
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <h2 class="font-semibold text-gray-700">Položky faktúry</h2>
-            <button type="button" @click="addItem()"
-                class="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                + Pridať položku
-            </button>
+            <div class="flex items-center gap-3">
+                <button type="button" @click="$refs.freeloCsv.click()"
+                    class="text-sm text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 font-medium px-3 py-1.5 rounded-lg transition-colors">
+                    ↑ Importovať z Freela
+                </button>
+                <input type="file" accept=".csv" x-ref="freeloCsv" class="hidden"
+                    @change="importFreeloCsv($event)">
+                <button type="button" @click="addItem()"
+                    class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                    + Pridať položku
+                </button>
+            </div>
         </div>
 
         <!-- Desktop tabuľka -->
@@ -371,6 +379,89 @@ function invoiceForm() {
 
         closeSuggestions(index) {
             this.items[index].suggestions = [];
+        },
+
+        importFreeloCsv(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const text = e.target.result
+                        .replace(/^\uFEFF+/, ''); // strip BOM (može byť viacnásobné)
+                    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+                    if (lines.length < 2) return;
+
+                    // Hlavička: pracovník;projekt;to-do list;úloha;dátum výkazu;dátum vloženia;čas;čiastka;mena;poznámka;podúloha;Popis úlohy;odkaz na úlohu;minúty;hodiny
+                    const header = lines[0].split(';').map(h => h.replace(/^"|"$/g, '').trim());
+                    const colProjekt = header.findIndex(h => h.toLowerCase().includes('projekt'));
+                    const colMinuty = header.findIndex(h => h.toLowerCase().includes('min'));
+
+                    if (colProjekt === -1 || colMinuty === -1) {
+                        alert('CSV nemá očakávaný formát (chýba stĺpec projekt alebo minúty).');
+                        return;
+                    }
+
+                    // Zhrnutie minút podľa projektu
+                    const projektMinuty = {};
+                    for (let i = 1; i < lines.length; i++) {
+                        const cols = this.parseCsvLine(lines[i]);
+                        if (!cols || cols.length <= Math.max(colProjekt, colMinuty)) continue;
+                        const projekt = (cols[colProjekt] || '').trim();
+                        const minStr = (cols[colMinuty] || '').trim().replace(',', '.');
+                        const min = parseFloat(minStr);
+                        if (!projekt || isNaN(min)) continue;
+                        projektMinuty[projekt] = (projektMinuty[projekt] || 0) + min;
+                    }
+
+                    if (Object.keys(projektMinuty).length === 0) {
+                        alert('Nenašli sa žiadne dáta na import.');
+                        return;
+                    }
+
+                    const RATE = 20; // EUR/hodinu
+                    const newItems = Object.entries(projektMinuty).map(([projekt, min]) => {
+                        const hodiny = Math.round(min / 60 * 100) / 100;
+                        const spolu = Math.round(hodiny * RATE * 100) / 100;
+                        return {
+                            nazov: projekt,
+                            mnozstvo: hodiny,
+                            jednotka: 'h',
+                            jcena: RATE,
+                            spolu: spolu,
+                            suggestions: [],
+                        };
+                    });
+
+                    this.items = newItems;
+                } catch (err) {
+                    alert('Chyba pri čítaní CSV: ' + err.message);
+                }
+                // Reset input aby sa dal znova vybrať rovnaký súbor
+                event.target.value = '';
+            };
+            reader.readAsText(file, 'UTF-8');
+        },
+
+        parseCsvLine(line) {
+            // Jednoduchý parser pre CSV s ; oddeľovačom a "" quoting
+            const result = [];
+            let cur = '';
+            let inQ = false;
+            for (let i = 0; i < line.length; i++) {
+                const ch = line[i];
+                if (ch === '"') {
+                    if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+                    else { inQ = !inQ; }
+                } else if (ch === ';' && !inQ) {
+                    result.push(cur);
+                    cur = '';
+                } else {
+                    cur += ch;
+                }
+            }
+            result.push(cur);
+            return result;
         },
     };
 }
