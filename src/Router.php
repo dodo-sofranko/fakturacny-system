@@ -45,7 +45,7 @@ class Router
         }
 
         http_response_code(404);
-        $this->load('404');
+        $this->load(class_exists('Api') && Api::isApiRequest() ? 'api/v1/not_found' : '404');
     }
 
     private function match(string $routePath, string $uri): ?array

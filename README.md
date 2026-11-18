@@ -128,3 +128,31 @@ AUTH_PASS=heslo php deploy/package.php   # heslo len pri prvom builde, .env sa p
 - Peppol ID = `0245:` + DIČ (10 číslic). Odberateľ musí mať DIČ alebo slovenské IČ DPH.
 - Test bez registrácie: `PEPPOL_API_URL=https://peppol.verteco.digital/sapi`, ID aj secret `sandbox` (len validácia, nič sa nedoručí).
 - Na hostingu pred nasadením spustiť migráciu z konca `database/schema.sql`.
+
+## JSON API (`/api/v1`)
+
+Prístup tokenom (`Authorization: Bearer <token>` alebo `X-Api-Key`), basic auth webu sa naň nevzťahuje. Na serveri je v `.env` len `API_TOKEN_HASH` (sha256 hex tokenu); bez neho API vracia 503. Token je vo vaulte `fakturacia/api-token`.
+
+| Metóda | Cesta | Popis |
+|---|---|---|
+| GET | `/api/v1/odberatelia` | zoznam odberateľov (aj `peppol_id`) |
+| POST | `/api/v1/odberatelia` | nový odberateľ `{nazov*, ulica, mesto, psc, ico, dic, ic_dph, email, …}` (409 pri rovnakom IČO) |
+| GET | `/api/v1/faktury?rok=&odberatel_id=` | zoznam faktúr |
+| GET | `/api/v1/faktury/dalsie-cislo` | ďalšie voľné číslo |
+| GET | `/api/v1/faktury/{id}` | detail s položkami |
+| POST | `/api/v1/faktury` | nová faktúra (nižšie); `"dry_run": true` = len kontrola a náhľad |
+| GET | `/api/v1/faktury/{id}/pdf` | PDF |
+| POST | `/api/v1/faktury/{id}/peppol` | odoslanie e-faktúry cez poštára (0,10 €) |
+
+```json
+{
+  "odberatel_ico": "55246125",            // alebo "odberatel_id": 2
+  "polozky": [{"nazov": "Tvorba webu", "mnozstvo": 2.5, "jednotka": "h", "jednotkova_cena": 20}],
+  "datum_vystavenia": "2026-11-30",       // voliteľné, default dnes
+  "datum_dodania": "2026-11-30",          // default = vystavenie
+  "splatnost_dni": 14,                    // alebo "datum_splatnosti"
+  "poznamka": "…",                        // voliteľné; cislo_faktury a variabilny_symbol sa dopočítajú
+  "zaloha": {"suma": 100, "datum": "2026-11-01", "cislo": "ZF2026001"}   // voliteľné
+}
+```
+Chyby vstupu: HTTP 422 `{"error", "chyby": {pole: text}}`.

@@ -5,14 +5,20 @@ require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/src/DB.php';
 require_once __DIR__ . '/src/Router.php';
 require_once __DIR__ . '/src/PayBySquare.php';
+require_once __DIR__ . '/src/Api.php';
+require_once __DIR__ . '/src/Faktury.php';
 require_once __DIR__ . '/src/Peppol/UblInvoice.php';
 require_once __DIR__ . '/src/Peppol/SapiClient.php';
 require_once __DIR__ . '/src/Peppol/PrijataFaktura.php';
 require_once __DIR__ . '/src/Peppol/PrijataPdf.php';
+require_once __DIR__ . '/src/Peppol/Odoslanie.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
-// Basic auth (na hostingu) — zapne sa, keď je v .env AUTH_USER a AUTH_PASS_HASH (password_hash)
-if (env('AUTH_USER') && env('AUTH_PASS_HASH')) {
+// JSON API (/api/v1/*) má vlastný token (API_TOKEN_HASH), basic auth sa naň nevzťahuje
+if (Api::isApiRequest()) {
+    Api::authenticate();
+} elseif (env('AUTH_USER') && env('AUTH_PASS_HASH')) {
+    // Basic auth (na hostingu) — zapne sa, keď je v .env AUTH_USER a AUTH_PASS_HASH (password_hash)
     $user = $_SERVER['PHP_AUTH_USER'] ?? null;
     $pass = $_SERVER['PHP_AUTH_PW'] ?? null;
     // PHP-FPM hlavičku nedáva do PHP_AUTH_*, .htaccess ju posiela ako HTTP_AUTHORIZATION
@@ -64,5 +70,15 @@ $router->get('/dodavatel/podpis-img',    'dodavatel/podpis_img');
 // API
 $router->get('/api/suggestions',         'api/suggestions');
 $router->get('/api/odberatelia',         'api/odberatelia');
+
+// JSON API v1 (token) – statické cesty pred {id}
+$router->get('/api/v1/odberatelia',             'api/v1/odberatelia');
+$router->post('/api/v1/odberatelia',            'api/v1/odberatelia_store');
+$router->get('/api/v1/faktury',                 'api/v1/faktury');
+$router->post('/api/v1/faktury',                'api/v1/faktury_store');
+$router->get('/api/v1/faktury/dalsie-cislo',    'api/v1/dalsie_cislo');
+$router->get('/api/v1/faktury/{id}',            'api/v1/faktura');
+$router->get('/api/v1/faktury/{id}/pdf',        'api/v1/faktura_pdf');
+$router->post('/api/v1/faktury/{id}/peppol',    'api/v1/faktura_peppol');
 
 $router->dispatch();
