@@ -47,7 +47,17 @@ class SapiClient
             ],
             'payload'       => $xml,
             'payloadFormat' => 'XML',
-        ], ['Idempotency-Key: ' . $idempotencyKey]);
+        ], ['Idempotency-Key: ' . self::uuid($idempotencyKey)]);
+    }
+
+    /** Stabilné UUID z ľubovoľného textu (ePošťák vyžaduje Idempotency-Key ako UUID; rovnaký vstup = rovnaké UUID). */
+    public static function uuid(string $key): string
+    {
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $key)) return strtolower($key);
+        $h = sha1('fakturacia:' . $key);
+        $h[12] = '5';                                         // verzia 5 (z mena)
+        $h[16] = dechex((hexdec($h[16]) & 0x3) | 0x8);        // variant RFC 4122
+        return sprintf('%s-%s-%s-%s-%s', substr($h, 0, 8), substr($h, 8, 4), substr($h, 12, 4), substr($h, 16, 4), substr($h, 20, 12));
     }
 
     /** Jedna stránka prijatých dokladov (status: RECEIVED | ACKNOWLEDGED). */
