@@ -1,0 +1,60 @@
+name: 🚀 Nasadenie na fakturacia.nakodim.sk
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Kód
+        uses: actions/checkout@v4
+
+      - name: 🐘 PHP 8.2 + Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+
+      - name: 🟢 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Rovnaký balík ako pri ručnom nasadení, ale bez .env a dumpu DB → build/fakturacia-ci/
+      - name: 🔨 Balík
+        run: php deploy/package.php --ci
+
+      # Nie SamKirkland/FTP-Deploy-Action: FTP Websupportu (od 2026-11) zhodí spojenie pri OPTS UTF8 / FEAT.
+      # Certifikát je na *.r6.websupport.sk, preto FTP_SERVER = ftp.r6.websupport.sk (nie nakodim.sk).
+      # dns:order inet — runner nemá IPv6. Bez --delete: .env a storage/ na serveri ostanú.
+      # Kód sa nahrá vždy celý; vendor/ len pri zmene veľkosti súboru (--ignore-time), nech sa neposiela 12 MB.
+      - name: 📂 Upload (FTPS)
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_NAME: ${{ secrets.FTP_NAME }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq lftp >/dev/null
+          cd build/fakturacia-ci
+          LFTP_PASSWORD="$FTP_PASS" lftp --env-password -u "$FTP_NAME" "$FTP_SERVER" -e "
+            set dns:order inet;
+            set ftp:ssl-force true; set ftp:ssl-protect-data true; set ssl:verify-certificate yes;
+            set ftp:use-feat false; set ftp:use-utf8 false; set ftp:passive-mode true;
+            set net:max-retries 3; set net:timeout 30;
+            mirror --reverse --no-perms --parallel=4 --verbose=1 --exclude ^vendor/ ./ ./;
+            mirror --reverse --no-perms --parallel=4 --verbose=1 --ignore-time vendor/ vendor/;
+            bye"
+
+      - name: ✅ Kontrola webu
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://fakturacia.nakodim.sk/)
+          echo "HTTP $code (bez prihlásenia má byť 401)"
+          test "$code" = "401"

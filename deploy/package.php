@@ -10,12 +10,16 @@
  *
  * .env v balíku má prázdne DB údaje – doplniť pred nahratím (alebo na serveri).
  * Existujúci build/fakturacia-deploy/.env sa pri ďalšom behu zachová.
+ *
+ *   php deploy/package.php --ci   – len kód do build/fakturacia-ci/ (bez .env a dumpu DB), používa GitHub Actions
  */
 declare(strict_types=1);
 
 $root  = dirname(__DIR__);
 $build = $root . '/build';
-$out   = $build . '/fakturacia-deploy';
+$ci    = in_array('--ci', $argv, true);
+// CI ide do vlastného priečinka, aby nezmazal lokálny build s vyplneným .env
+$out   = $build . ($ci ? '/fakturacia-ci' : '/fakturacia-deploy');
 
 function run(string $cmd): void
 {
@@ -43,6 +47,7 @@ if (is_dir($out)) run('rm -rf ' . escapeshellarg($out));
 @mkdir($out, 0755, true);
 
 // 1) CSS build
+if ($ci) run('cd ' . escapeshellarg($root) . ' && npm ci --silent --no-audit --no-fund');
 run('cd ' . escapeshellarg($root) . ' && npm run build --silent');
 
 // 2) Zdrojáky
@@ -60,6 +65,12 @@ file_put_contents("$out/composer.json", json_encode($composer, JSON_PRETTY_PRINT
 run('cd ' . escapeshellarg($out) . ' && composer update --no-dev --optimize-autoloader --no-interaction --quiet');
 unlink("$out/composer.json");
 unlink("$out/composer.lock");
+
+if ($ci) {
+    $files = (int)trim(shell_exec('find ' . escapeshellarg($out) . ' -type f | wc -l'));
+    echo "Balík (bez .env a DB): $out ($files súborov)\n";
+    exit(0);
+}
 
 // 4) .env
 if ($oldEnv !== null) {
