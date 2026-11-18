@@ -55,6 +55,13 @@ class UblInvoice
         if (!$receiver) throw new RuntimeException('Odberateľ „' . $f['o_nazov'] . '“ nemá platné DIČ (10 číslic).');
         if (!$polozky) throw new RuntimeException('Faktúra nemá položky.');
 
+        // PDF faktúry (to isté ako v zozname) sa pribalí do e-faktúry – odberateľ uvidí náš vzhľad aj QR na platbu
+        if (empty($f['pdf_data'])) {
+            require_once dirname(__DIR__) . '/PdfGenerator.php';
+            PdfGenerator::generateAndSave($fakturaId);
+            $f['pdf_data'] = DB::fetch("SELECT pdf_data FROM faktury WHERE id = ?", [$fakturaId])['pdf_data'] ?? null;
+        }
+
         $self = new self();
         $xml = $self->render($f, $d, $polozky, $sender, $receiver);
         return ['xml' => $xml, 'sender' => $sender, 'receiver' => $receiver, 'cislo' => $f['cislo_faktury']];
@@ -93,6 +100,16 @@ class UblInvoice
         $this->cbc($inv, 'DocumentCurrencyCode', 'EUR');
         // BT-10: Peppol vyžaduje buyer reference alebo číslo objednávky
         $this->cbc($inv, 'BuyerReference', $f['variabilny_symbol'] ?: $f['cislo_faktury']);
+
+        // Príloha: PDF faktúry (BG-24)
+        if (!empty($f['pdf_data'])) {
+            $ref = $this->cac($inv, 'AdditionalDocumentReference');
+            $this->cbc($ref, 'ID', $f['cislo_faktury']);
+            $this->cbc($ref, 'DocumentDescription', 'Faktúra v PDF');
+            $bin = $this->cbc($this->cac($ref, 'Attachment'), 'EmbeddedDocumentBinaryObject', base64_encode($f['pdf_data']));
+            $bin->setAttribute('mimeCode', 'application/pdf');
+            $bin->setAttribute('filename', 'Faktura_' . preg_replace('/[^a-zA-Z0-9]/', '', $f['cislo_faktury']) . '.pdf');
+        }
 
         // Dodávateľ
         $sp = $this->cac($this->cac($inv, 'AccountingSupplierParty'), 'Party');

@@ -8,6 +8,7 @@ require_once __DIR__ . '/src/PayBySquare.php';
 require_once __DIR__ . '/src/Peppol/UblInvoice.php';
 require_once __DIR__ . '/src/Peppol/SapiClient.php';
 require_once __DIR__ . '/src/Peppol/PrijataFaktura.php';
+require_once __DIR__ . '/src/Peppol/PrijataPdf.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
 // Basic auth (na hostingu) — zapne sa, keď je v .env AUTH_USER a AUTH_PASS_HASH (password_hash)
@@ -53,6 +54,7 @@ $router->post('/odberatelia/{id}/delete', 'odberatelia/delete');
 $router->get('/prijate',                 'prijate/index');
 $router->post('/prijate/sync',           'prijate/sync');
 $router->get('/prijate/{id}/xml',        'prijate/xml');
+$router->get('/prijate/{id}/pdf',        'prijate/pdf');
 
 // Dodávateľ
 $router->get('/dodavatel',               'dodavatel/edit');

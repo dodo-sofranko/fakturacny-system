@@ -122,7 +122,8 @@ AUTH_PASS=heslo php deploy/package.php   # heslo len pri prvom builde, .env sa p
 - Pri každej faktúre je ikona `code` = stiahnutie e-faktúry (UBL 2.1, Peppol BIS Billing 3.0, kategória DPH „O“ – neplatiteľ).
 - Keď sú v `.env` vyplnené `PEPPOL_API_URL`, `PEPPOL_CLIENT_ID`, `PEPPOL_CLIENT_SECRET`, pribudne ikona `send` = odoslanie cez digitálneho poštára (štandard SAPI-SK, funguje s každým poštárom). Stav sa ukladá do `faktury.peppol_*`.
 - Odoslaná e-faktúra sa ukladá do `faktury.peppol_xml` (originál na archiváciu 10 rokov); ikona `code` potom vracia presne tento originál.
-- Menu **Prijaté** → „Stiahnuť nové“: stiahne čakajúce e-faktúry od poštára do `prijate_efaktury` (celé XML + údaje na prehľad) a potvrdí im prevzatie.
+- Do odosielanej e-faktúry sa pribalí PDF faktúry (AdditionalDocumentReference) – odberateľ vidí náš vzhľad aj QR.
+- Menu **Prijaté** → „Stiahnuť nové“: stiahne čakajúce e-faktúry od poštára do `prijate_efaktury` (celé XML + údaje na prehľad) a potvrdí im prevzatie. Klik na číslo = PDF: pribalené PDF dodávateľa, inak náhľad vytvorený z XML (`src/Peppol/PrijataPdf.php`).
 - Ostrý poštár: ePošťák, `PEPPOL_API_URL=https://epostak.sk/sapi/v1`; prístup je vo vaulte `fakturacia/epostak-api` vo formáte `client_id:secret`.
 - Peppol ID = `0245:` + DIČ (10 číslic). Odberateľ musí mať DIČ alebo slovenské IČ DPH.
 - Test bez registrácie: `PEPPOL_API_URL=https://peppol.verteco.digital/sapi`, ID aj secret `sandbox` (len validácia, nič sa nedoručí).
