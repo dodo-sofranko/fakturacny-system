@@ -30,5 +30,6 @@ view('faktury/index', [
     'podlaRoku'   => $podlaRoku,
     'odberatelia' => $odberatelia,
     'filterOd'    => $odberatelId,
+    'peppolOn'    => SapiClient::isConfigured(),
     'pageTitle'   => 'Faktúry — ' . APP_NAME,
 ]);

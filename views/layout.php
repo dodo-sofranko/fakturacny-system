@@ -17,6 +17,7 @@
         <div class="flex gap-1">
             <a href="/" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors <?= str_starts_with($_SERVER['REQUEST_URI'], '/faktury') || $_SERVER['REQUEST_URI'] === '/' ? 'bg-gray-100 text-gray-900' : '' ?>">Faktúry</a>
             <a href="/odberatelia" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors <?= str_starts_with($_SERVER['REQUEST_URI'], '/odberatelia') ? 'bg-gray-100 text-gray-900' : '' ?>">Odberatelia</a>
+            <a href="/prijate" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors <?= str_starts_with($_SERVER['REQUEST_URI'], '/prijate') ? 'bg-gray-100 text-gray-900' : '' ?>">Prijaté</a>
             <a href="/dodavatel" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors <?= str_starts_with($_SERVER['REQUEST_URI'], '/dodavatel') ? 'bg-gray-100 text-gray-900' : '' ?>">Môj účet</a>
         </div>
     </div>

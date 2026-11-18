@@ -116,3 +116,14 @@ AUTH_PASS=heslo php deploy/package.php   # heslo len pri prvom builde, .env sa p
 - Prihlásenie (basic auth) robí `index.php` podľa `AUTH_USER` / `AUTH_PASS_HASH` v `.env`; `deploy/.htaccess` posiela hlavičku Authorization do PHP a blokuje neverejné priečinky.
 - Do balíka ide len dompdf + endroid/qr-code (mpdf/tcpdf appka nepoužíva). PHP na hostingu 8.2+.
 - QR „PAY by square" potrebuje na serveri `xz` cez `shell_exec`; bez neho sa vygeneruje náhradný EPC QR.
+
+## E-faktúry cez Peppol (od 1.1.2027)
+
+- Pri každej faktúre je ikona `code` = stiahnutie e-faktúry (UBL 2.1, Peppol BIS Billing 3.0, kategória DPH „O“ – neplatiteľ).
+- Keď sú v `.env` vyplnené `PEPPOL_API_URL`, `PEPPOL_CLIENT_ID`, `PEPPOL_CLIENT_SECRET`, pribudne ikona `send` = odoslanie cez digitálneho poštára (štandard SAPI-SK, funguje s každým poštárom). Stav sa ukladá do `faktury.peppol_*`.
+- Odoslaná e-faktúra sa ukladá do `faktury.peppol_xml` (originál na archiváciu 10 rokov); ikona `code` potom vracia presne tento originál.
+- Menu **Prijaté** → „Stiahnuť nové“: stiahne čakajúce e-faktúry od poštára do `prijate_efaktury` (celé XML + údaje na prehľad) a potvrdí im prevzatie.
+- Ostrý poštár: ePošťák, `PEPPOL_API_URL=https://epostak.sk/sapi/v1`; prístup je vo vaulte `fakturacia/epostak-api` vo formáte `client_id:secret`.
+- Peppol ID = `0245:` + DIČ (10 číslic). Odberateľ musí mať DIČ alebo slovenské IČ DPH.
+- Test bez registrácie: `PEPPOL_API_URL=https://peppol.verteco.digital/sapi`, ID aj secret `sandbox` (len validácia, nič sa nedoručí).
+- Na hostingu pred nasadením spustiť migráciu z konca `database/schema.sql`.

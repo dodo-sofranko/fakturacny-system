@@ -81,6 +81,7 @@
                                 class="inline-flex text-green-500 hover:text-green-700 align-middle ml-1" title="Kopírovať faktúru">
                                 <span class="material-icons" style="font-size:20px">content_copy</span>
                             </a>
+                            <?php $size = 20; include __DIR__ . '/_peppol.php'; ?>
                             <a href="/faktury/<?= $f['id'] ?>/edit"
                                 class="inline-flex text-blue-500 hover:text-blue-700 align-middle ml-1" title="Upraviť">
                                 <span class="material-icons" style="font-size:20px">edit</span>
@@ -142,6 +143,7 @@
                             style="color:#22c55e" title="Kopírovať">
                             <span class="material-icons" style="font-size:22px">content_copy</span>
                         </a>
+                        <?php $size = 22; include __DIR__ . '/_peppol.php'; ?>
                         <a href="/faktury/<?= $f['id'] ?>/edit"
                             style="color:#3b82f6" title="Upraviť">
                             <span class="material-icons" style="font-size:22px">edit</span>

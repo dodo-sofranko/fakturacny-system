@@ -57,6 +57,11 @@ CREATE TABLE IF NOT EXISTS faktury (
     zaloha_cislo VARCHAR(20) NULL,       -- číslo zálohovej faktúry
     pdf_data LONGBLOB,
     pdf_generated_at DATETIME,
+    peppol_status VARCHAR(20) NULL,       -- ACCEPTED | UNDELIVERABLE | REJECTED | ERROR
+    peppol_document_id VARCHAR(100) NULL, -- providerDocumentId od poštára
+    peppol_sent_at DATETIME NULL,
+    peppol_detail TEXT NULL,
+    peppol_xml MEDIUMTEXT NULL,           -- odoslaná e-faktúra (originál, archivácia 10 rokov)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (odberatel_id) REFERENCES odberatelia(id),
     INDEX idx_rok (datum_vystavenia),
@@ -76,6 +81,25 @@ CREATE TABLE IF NOT EXISTS polozky (
     FOREIGN KEY (faktura_id) REFERENCES faktury(id) ON DELETE CASCADE
 );
 
+-- Prijaté e-faktúry (Peppol) – originál XML + údaje na prehľad
+CREATE TABLE IF NOT EXISTS prijate_efaktury (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    document_id VARCHAR(100) NOT NULL UNIQUE,   -- ID dokladu u poštára
+    odosielatel_id VARCHAR(100) DEFAULT NULL,   -- Peppol ID odosielateľa (0245:DIČ)
+    typ VARCHAR(20) NOT NULL DEFAULT 'faktura', -- faktura | dobropis
+    cislo VARCHAR(100) DEFAULT NULL,
+    dodavatel VARCHAR(255) DEFAULT NULL,
+    dodavatel_ico VARCHAR(50) DEFAULT NULL,
+    datum_vystavenia DATE DEFAULT NULL,
+    datum_splatnosti DATE DEFAULT NULL,
+    suma DECIMAL(12,2) DEFAULT NULL,
+    mena CHAR(3) DEFAULT NULL,
+    xml MEDIUMTEXT NOT NULL,
+    prijate_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_prijate (prijate_at)
+);
+
 -- Autocomplete návrhy pre názvy položiek
 CREATE TABLE IF NOT EXISTS polozky_suggestions (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -88,3 +112,10 @@ CREATE TABLE IF NOT EXISTS polozky_suggestions (
 -- Migrácia pre existujúce DB (odpočet zálohy):
 -- ALTER TABLE faktury ADD COLUMN zaloha_suma DECIMAL(10,2) NULL AFTER celkova_suma,
 --   ADD COLUMN zaloha_datum DATE NULL AFTER zaloha_suma, ADD COLUMN zaloha_cislo VARCHAR(20) NULL AFTER zaloha_datum;
+
+-- Migrácia pre existujúce DB (e-faktúry cez Peppol):
+-- ALTER TABLE faktury ADD COLUMN peppol_status VARCHAR(20) NULL AFTER pdf_generated_at,
+--   ADD COLUMN peppol_document_id VARCHAR(100) NULL AFTER peppol_status,
+--   ADD COLUMN peppol_sent_at DATETIME NULL AFTER peppol_document_id, ADD COLUMN peppol_detail TEXT NULL AFTER peppol_sent_at,
+--   ADD COLUMN peppol_xml MEDIUMTEXT NULL AFTER peppol_detail;
+-- + CREATE TABLE prijate_efaktury vyššie
