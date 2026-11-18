@@ -287,6 +287,33 @@ if (empty($polozky)) $polozkyJson = '[]';
             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"><?= e(($isEdit || $isCopy) ? ($faktura['poznamka'] ?? '') : '') ?></textarea>
     </div>
 
+    <!-- Odpočet zálohy (vyúčtovacia faktúra) -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h2 class="block text-sm font-medium text-gray-700 mb-1">Odpočet zálohy</h2>
+        <p class="text-xs text-gray-400 mb-3">Len pri vyúčtovacej faktúre – zaplatená záloha sa na PDF odpočíta od sumy a vypíše sa „Na úhradu spolu“.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Zaplatená záloha (EUR)</label>
+                <input type="number" step="0.01" min="0" name="zaloha_suma"
+                    value="<?= e($isEdit && $faktura['zaloha_suma'] !== null ? $faktura['zaloha_suma'] : '') ?>"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onwheel="this.blur()">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Dátum úhrady zálohy</label>
+                <input type="date" name="zaloha_datum"
+                    value="<?= e($isEdit ? ($faktura['zaloha_datum'] ?? '') : '') ?>"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Číslo zálohovej faktúry</label>
+                <input type="text" name="zaloha_cislo"
+                    value="<?= e($isEdit ? ($faktura['zaloha_cislo'] ?? '') : '') ?>"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+        </div>
+    </div>
+
     <!-- Submit -->
     <div class="flex justify-between items-center">
         <a href="/faktury" class="text-gray-500 hover:text-gray-700">Zrušiť</a>

@@ -7,6 +7,22 @@ require_once __DIR__ . '/src/Router.php';
 require_once __DIR__ . '/src/PayBySquare.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
+// Basic auth (na hostingu) — zapne sa, keď je v .env AUTH_USER a AUTH_PASS_HASH (password_hash)
+if (env('AUTH_USER') && env('AUTH_PASS_HASH')) {
+    $user = $_SERVER['PHP_AUTH_USER'] ?? null;
+    $pass = $_SERVER['PHP_AUTH_PW'] ?? null;
+    // PHP-FPM hlavičku nedáva do PHP_AUTH_*, .htaccess ju posiela ako HTTP_AUTHORIZATION
+    $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+    if ($user === null && stripos($header, 'Basic ') === 0) {
+        [$user, $pass] = array_pad(explode(':', (string)base64_decode(substr($header, 6)), 2), 2, '');
+    }
+    if (!$user || !hash_equals(env('AUTH_USER'), $user) || !password_verify((string)$pass, env('AUTH_PASS_HASH'))) {
+        header('WWW-Authenticate: Basic realm="Fakturacia", charset="UTF-8"');
+        http_response_code(401);
+        exit('Prístup zamietnutý.');
+    }
+}
+
 $router = new Router(BASE_PATH);
 
 // Faktúry

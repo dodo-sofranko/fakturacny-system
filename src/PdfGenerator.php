@@ -31,9 +31,10 @@ class PdfGenerator
         $dodavatel = DB::fetch("SELECT * FROM dodavatel WHERE id = 1");
         $polozky   = DB::fetchAll("SELECT * FROM polozky WHERE faktura_id = ? ORDER BY poradie", [$fakturaId]);
 
-        $qrBase64 = self::generateQrCode(
+        $naUhradu = self::naUhradu($faktura);
+        $qrBase64 = $naUhradu <= 0 ? '' : self::generateQrCode(
             $dodavatel['iban'] ?? '',
-            (float)$faktura['celkova_suma'],
+            $naUhradu,
             $faktura['variabilny_symbol'] ?? $faktura['cislo_faktury'],
             $faktura['datum_splatnosti'],
             $faktura['cislo_faktury'],
@@ -232,10 +233,17 @@ class PdfGenerator
   <LegalMonetaryTotal>
     <TaxExclusiveAmount currencyID="EUR">' . $suma . '</TaxExclusiveAmount>
     <TaxInclusiveAmount currencyID="EUR">' . $suma . '</TaxInclusiveAmount>
-    <PayableAmount currencyID="EUR">' . $suma . '</PayableAmount>
+' . ((float)($faktura['zaloha_suma'] ?? 0) > 0 ? '    <PaidDepositsAmount currencyID="EUR">' . number_format((float)$faktura['zaloha_suma'], 2, '.', '') . '</PaidDepositsAmount>
+' : '') . '    <PayableAmount currencyID="EUR">' . number_format(self::naUhradu($faktura), 2, '.', '') . '</PayableAmount>
   </LegalMonetaryTotal>
 ' . $linesXml . '
 </Invoice>';
+    }
+
+    /** Suma na úhradu = celková suma mínus zaplatená záloha (vyúčtovacia faktúra). */
+    private static function naUhradu(array $faktura): float
+    {
+        return round((float)$faktura['celkova_suma'] - (float)($faktura['zaloha_suma'] ?? 0), 2);
     }
 
     private static function h(mixed $v): string
@@ -252,6 +260,14 @@ class PdfGenerator
         $suma   = number_format((float)$faktura['celkova_suma'], 2, ',', ' ');
         $vs     = self::h($faktura['variabilny_symbol'] ?? $faktura['cislo_faktury']);
         $poz    = self::h($faktura['poznamka'] ?? '');
+        $zaloha     = (float)($faktura['zaloha_suma'] ?? 0);
+        $naUhradu   = number_format(self::naUhradu($faktura), 2, ',', ' ');
+        $zalohaText = '';
+        if ($zaloha > 0) {
+            $zalohaText = 'Zaplatená záloha'
+                . (!empty($faktura['zaloha_cislo']) ? ' (ZF ' . self::h($faktura['zaloha_cislo']) . ')' : '')
+                . (!empty($faktura['zaloha_datum']) ? ' dňa ' . date('d.m.Y', strtotime($faktura['zaloha_datum'])) : '');
+        }
 
         $dNazov  = self::h($dodavatel['nazov'] ?? '');
         $dUlica  = self::h($dodavatel['ulica'] ?? '');
@@ -310,6 +326,12 @@ class PdfGenerator
         }
 
         // Položky
+        // Pri viac ako 13 položkách dať podpis naľavo vedľa „Spolu", inak padá sám na novú stranu
+        $podpisVedla = count($polozky) > 13 && $podpisImg !== '';
+
+        // Pri veľa položkách hustejšie riadky, aby sa súčet + podpis zmestili na 1. stranu
+        $rowPad = count($polozky) > 13 ? '4px 8px' : '5px 8px';
+
         $polozkyHtml = '';
         foreach ($polozky as $i => $p) {
             $n     = $i + 1;
@@ -327,12 +349,31 @@ class PdfGenerator
 
             $bg = ($i % 2 === 0) ? '#fff' : '#f7f7f7';
             $polozkyHtml .= '<tr style="background:' . $bg . '">'
-                . '<td style="padding:5px 8px;color:#555">' . $n . '.</td>'
-                . '<td style="padding:5px 8px;font-weight:bold">' . $nazov . '</td>'
-                . '<td style="padding:5px 8px;text-align:right">' . $mnoz . '</td>'
-                . '<td style="padding:5px 8px;text-align:right">' . $jcena . '</td>'
-                . '<td style="padding:5px 8px;text-align:right;font-weight:bold">' . $spolu . '</td>'
+                . '<td style="padding:' . $rowPad . ';color:#555">' . $n . '.</td>'
+                . '<td style="padding:' . $rowPad . ';font-weight:bold">' . $nazov . '</td>'
+                . '<td style="padding:' . $rowPad . ';text-align:right">' . $mnoz . '</td>'
+                . '<td style="padding:' . $rowPad . ';text-align:right">' . $jcena . '</td>'
+                . '<td style="padding:' . $rowPad . ';text-align:right;font-weight:bold">' . $spolu . '</td>'
                 . '</tr>';
+        }
+
+        $sumaRiadky = '<tr>
+      <td style="font-weight:bold;font-size:12pt">Spolu</td>
+      <td style="font-weight:bold;font-size:12pt;text-align:right">' . $suma . ' EUR</td>
+    </tr>';
+        if ($zaloha > 0) {
+            $sumaRiadky = '<tr>
+      <td style="font-size:10pt;padding-top:2px">Spolu</td>
+      <td style="font-size:10pt;text-align:right;padding-top:2px">' . $suma . ' EUR</td>
+    </tr>
+    <tr>
+      <td style="font-size:10pt;padding:2px 0 4px 0">' . $zalohaText . '</td>
+      <td style="font-size:10pt;text-align:right;padding:2px 0 4px 0;white-space:nowrap">-' . number_format($zaloha, 2, ',', ' ') . ' EUR</td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold;font-size:12pt;border-top:0.5pt solid #bbb;padding-top:3px">Na úhradu spolu</td>
+      <td style="font-weight:bold;font-size:12pt;text-align:right;border-top:0.5pt solid #bbb;padding-top:3px">' . $naUhradu . ' EUR</td>
+    </tr>';
         }
 
         $S = 'font-family:DejaVu Sans,Arial,sans-serif;font-size:10pt;color:#222;line-height:1.3;';
@@ -405,7 +446,7 @@ class PdfGenerator
       <tr valign="middle">
         <td>
           <p style="margin:0">Spôsob úhrady:&nbsp; <strong>Bankový prevod</strong></p>
-          <p style="margin:3px 0 0 0">Suma:&nbsp; <strong style="font-size:12pt">' . $suma . ' EUR</strong></p>
+          <p style="margin:3px 0 0 0">' . ($zaloha > 0 ? 'Na úhradu' : 'Suma') . ':&nbsp; <strong style="font-size:12pt">' . $naUhradu . ' EUR</strong></p>
           <p style="margin:2px 0 0 0">Variabilný symbol:&nbsp; <strong>' . $vs . '</strong></p>
           <p style="margin:4px 0 0 0">IBAN:&nbsp; <strong>' . $dIban . '</strong></p>
           ' . ($dSwift ? '<p style="margin:1px 0 0 0">SWIFT:&nbsp; <strong>' . $dSwift . '</strong></p>' : '') . '
@@ -435,16 +476,28 @@ class PdfGenerator
   <tbody>' . $polozkyHtml . '</tbody>
 </table>
 
+' . ($podpisVedla ? '
+<!-- SPOLU + PODPIS v jednom riadku (veľa položiek — aby podpis nepadol na novú stranu) -->
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:' . ($zaloha > 0 ? '10px' : '20px') . ';page-break-inside:avoid">
+<tr valign="top">
+  <td width="50%" align="center">' . $podpisImg . '</td>
+  <td width="50%">
+    <div style="background:#f7f7f7;padding:4px 12px">
+    <table width="100%" cellpadding="0" cellspacing="0">
+    ' . $sumaRiadky . '
+    </table>
+    </div>
+  </td>
+</tr>
+</table>
+' : '
 <!-- SPOLU riadok -->
 <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:30px">
 <tr>
   <td width="50%"></td>
   <td width="50%" style="background:#f7f7f7;padding:4px 12px">
     <table width="100%" cellpadding="0" cellspacing="0">
-    <tr>
-      <td style="font-weight:bold;font-size:12pt">Spolu</td>
-      <td style="font-weight:bold;font-size:12pt;text-align:right">' . $suma . ' EUR</td>
-    </tr>
+    ' . $sumaRiadky . '
     </table>
   </td>
 </tr>
@@ -461,6 +514,7 @@ class PdfGenerator
   </td>
 </tr>
 </table>
+') . '
 
 <!-- Register text — fixne na spodku stránky, vycentrovaný -->
 ' . ($dPodpis ? '<div style="position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:7.5pt;color:#777">' . $dPodpis . '</div>' : '') . '

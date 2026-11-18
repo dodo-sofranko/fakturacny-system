@@ -52,6 +52,9 @@ CREATE TABLE IF NOT EXISTS faktury (
     variabilny_symbol VARCHAR(20) DEFAULT '',
     poznamka TEXT,
     celkova_suma DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    zaloha_suma DECIMAL(10,2) NULL,      -- vyúčtovacia faktúra: odpočet zaplatenej zálohy
+    zaloha_datum DATE NULL,              -- dátum úhrady zálohy
+    zaloha_cislo VARCHAR(20) NULL,       -- číslo zálohovej faktúry
     pdf_data LONGBLOB,
     pdf_generated_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -81,3 +84,7 @@ CREATE TABLE IF NOT EXISTS polozky_suggestions (
     pouziti_count INT DEFAULT 1,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+-- Migrácia pre existujúce DB (odpočet zálohy):
+-- ALTER TABLE faktury ADD COLUMN zaloha_suma DECIMAL(10,2) NULL AFTER celkova_suma,
+--   ADD COLUMN zaloha_datum DATE NULL AFTER zaloha_suma, ADD COLUMN zaloha_cislo VARCHAR(20) NULL AFTER zaloha_datum;

@@ -20,3 +20,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.code-workspace
+
+# Balík na hosting (obsahuje .env)
+/build/

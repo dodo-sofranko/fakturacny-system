@@ -1,0 +1,31 @@
+# Websupport: document root subdomény (sub/fakturacia) = koreň projektu.
+# Prihlásenie (basic auth) rieši index.php podľa AUTH_USER / AUTH_PASS_HASH v .env.
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # PHP-FPM inak zahodí hlavičku Authorization (meno a heslo z basic auth)
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Neverejné priečinky a súbory
+    RewriteRule ^(src|controllers|views|vendor|database|storage|deploy)(/|$) - [F,L]
+    RewriteRule ^(config\.php|composer\.(json|lock)|README\.md)$ - [F,L]
+    RewriteRule (^|/)\. - [F,L]
+
+    # Statické súbory z public/ priamo, všetko ostatné cez index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    Require all denied
+</IfModule>
+
+# Poistka, keby rewrite nefungoval
+<FilesMatch "^(\.env|\.htaccess|config\.php|composer\.(json|lock))$">
+    Require all denied
+</FilesMatch>

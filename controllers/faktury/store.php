@@ -7,6 +7,9 @@ $datumD     = trim($_POST['datum_dodania'] ?? '');
 $datumS     = trim($_POST['datum_splatnosti'] ?? '');
 $vs         = trim($_POST['variabilny_symbol'] ?? $cislo);
 $poznamka   = trim($_POST['poznamka'] ?? '');
+$zalohaSuma  = (float)str_replace(',', '.', $_POST['zaloha_suma'] ?? 0);
+$zalohaDatum = trim($_POST['zaloha_datum'] ?? '');
+$zalohaCislo = trim($_POST['zaloha_cislo'] ?? '');
 
 // Validácia
 if (!$cislo || !$odberatelId || !$datumV || !$datumD || !$datumS) {
@@ -48,6 +51,9 @@ $fakturaId = DB::insert('faktury', [
     'variabilny_symbol'=> $vs,
     'poznamka'         => $poznamka ?: null,
     'celkova_suma'     => $celkovaSuma,
+    'zaloha_suma'      => $zalohaSuma > 0 ? $zalohaSuma : null,
+    'zaloha_datum'     => $zalohaSuma > 0 && $zalohaDatum ? $zalohaDatum : null,
+    'zaloha_cislo'     => $zalohaSuma > 0 && $zalohaCislo ? $zalohaCislo : null,
 ]);
 
 // Uložíme položky

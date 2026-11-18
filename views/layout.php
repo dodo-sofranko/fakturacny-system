@@ -6,7 +6,7 @@
     <title><?= e($pageTitle ?? APP_NAME) ?></title>
     <link rel="stylesheet" href="/public/css/app.css?v=<?= filemtime(__DIR__ . '/../public/css/app.css') ?>">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="/public/alpine.min.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
 

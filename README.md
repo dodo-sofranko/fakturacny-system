@@ -104,3 +104,15 @@ Po každej zmene CSS treba spustiť build (alebo mať bežiaci `npm run dev`):
 ```bash
 npm run build
 ```
+
+## Nasadenie na hosting (fakturacia.nakodim.sk, Websupport)
+
+```bash
+AUTH_PASS=heslo php deploy/package.php   # heslo len pri prvom builde, .env sa potom zachová
+```
+
+- `build/fakturacia-deploy/` → nahrať cez FTP do `sub/fakturacia/` (aj skryté `.htaccess` a `.env`).
+- `build/fakturacia-db.sql` → importovať do DB na hostingu (phpMyAdmin), DB údaje doplniť do `.env`.
+- Prihlásenie (basic auth) robí `index.php` podľa `AUTH_USER` / `AUTH_PASS_HASH` v `.env`; `deploy/.htaccess` posiela hlavičku Authorization do PHP a blokuje neverejné priečinky.
+- Do balíka ide len dompdf + endroid/qr-code (mpdf/tcpdf appka nepoužíva). PHP na hostingu 8.2+.
+- QR „PAY by square" potrebuje na serveri `xz` cez `shell_exec`; bez neho sa vygeneruje náhradný EPC QR.
